@@ -1,0 +1,23 @@
+//
+//  ZSTest.pch
+//  ZSTest
+//
+//  Created by zhoushuai on 16/3/9.
+//  Copyright © 2016年 zhoushuai. All rights reserved.
+//
+
+#ifndef ZSTest_pch
+#define ZSTest_pch
+
+// Include any system framework and library headers here that should be included in all compilation units.
+// You will also need to set the Prefix Header build setting of one or more of your targets to reference this file.
+
+//获取屏幕的大小
+#define  kDeviceWidth        [[UIScreen mainScreen] bounds].size.width
+#define  kDeviceHeight       [[UIScreen mainScreen] bounds].size.height
+
+#define VideoURLString   @""
+#define VideoLocalFileName @"不能说的秘密"
+
+
+#endif /* ZSTest_pch */
