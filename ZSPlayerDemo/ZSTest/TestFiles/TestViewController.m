@@ -22,12 +22,16 @@
 
 @implementation TestViewController
 
+#pragma mark - Life Cycle
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor whiteColor];
     self.navigationController.navigationBar.translucent = NO;
     self.title = @"测试";
  }
+
+
 
 - (IBAction)TestPlayerBtnClick:(UIButton *)sender {
     switch (sender.tag - 100) {

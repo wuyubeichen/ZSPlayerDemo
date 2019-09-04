@@ -14,6 +14,7 @@
 @property (weak, nonatomic) IBOutlet UIView *containerView;
 @property (nonatomic,strong)AVPlayer *player;//播放器对象
 @property (nonatomic,strong)AVPlayerItem *currentPlayerItem;
+@property (nonatomic, strong) id timeObserver;
 
 @property (weak, nonatomic) IBOutlet UIButton *playerInfoButton;
 @property (weak, nonatomic) IBOutlet UIButton *playBtn;
@@ -22,8 +23,7 @@
 @property (weak, nonatomic) IBOutlet UISlider *sliderView;
 @property (weak, nonatomic) IBOutlet UILabel *currentPlayTimeLabel;
 @property (weak, nonatomic) IBOutlet UILabel *totalNeedPlayTimeLabel;
-
-//缓冲进度
+//缓冲进度相关
 @property (weak, nonatomic) IBOutlet UIProgressView *progressView;
 @property (weak, nonatomic) IBOutlet UILabel *currentLoadTimeLabel;
 @property (weak, nonatomic) IBOutlet UILabel *totalNeedLoadTimeLabel;
@@ -34,15 +34,15 @@
 @end
 
 @implementation TestAVPlayerViewController
-#pragma mark - 控制器视图方法
+
+#pragma mark - Life Cycle
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     [self.navigationController setNavigationBarHidden:NO animated:YES];
-    //第二步:获取播放地址URL
-    //本地视频路径
+    //第二步:获取播放地址URL(本地路径、网络链接)
     NSString* localFilePath=[[NSBundle mainBundle]pathForResource:@"不能说的秘密" ofType:@"mp4"];
     NSURL *localVideoUrl = [NSURL fileURLWithPath:localFilePath];
-    //网络视频路径
     NSString *webVideoPath = @"http://data.vod.itc.cn/?rb=1&key=jbZhEJhlqlUN-Wj_HEI8BjaVqKNFvDrn&prod=flash&pt=1&new=/137/113/vITnGttPQmaeWrZ3mg1j9H.mp4";
     NSURL *webVideoUrl = [NSURL URLWithString:webVideoPath];
     AVPlayerItem *playerItem = [[AVPlayerItem alloc] initWithURL:webVideoUrl];
@@ -80,8 +80,16 @@
     [self.player.currentItem addObserver:self forKeyPath:@"loadedTimeRanges" options:NSKeyValueObservingOptionNew context:nil];
     
     //测试2:刷新播放进度
+    /**
+     注意：使用addPeriodicTimeObserverForInterval必须持有返回对象，且在不需要播放器的时候移除此对象；
+     否则将会导致undefined behavior
+     @result
+     An object conforming to the NSObject protocol.  You must retain this returned value as long as you want the time observer to be invoked by the player.
+     Pass this object to -removeTimeObserver: to cancel time observation.
+     Releasing the observer object without a call to -removeTimeObserver: will result in undefined behavior
+     */
     __weak __typeof(self) weakSelf = self;
-    [self.player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1) queue:dispatch_get_main_queue() usingBlock:^(CMTime time) {
+   self.timeObserver = [self.player addPeriodicTimeObserverForInterval:CMTimeMake(1, 1) queue:dispatch_get_main_queue() usingBlock:^(CMTime time) {
         //当前播放的时间
         NSTimeInterval currentTime = CMTimeGetSeconds(time);
         //视频的总时间
@@ -106,11 +114,34 @@
 - (void)dealloc{
     [self.currentPlayerItem removeObserver:self forKeyPath:@"status"];
     [self.currentPlayerItem removeObserver:self forKeyPath:@"loadedTimeRanges"];
+    [self.player removeTimeObserver:self.timeObserver];
 }
 
 
 
-#pragma mark - 观察者方法
+
+
+
+#pragma mark - Respond To Events
+
+//播放失败，点击重新加载
+- (IBAction)playerInfoBtnClick:(id)sender {
+    //在这里处理播放失败逻辑
+}
+//UISlider的响应方法:拖动滑块，改变播放进度
+- (IBAction)sliderViewChange:(id)sender {
+    if(self.player.status == AVPlayerStatusReadyToPlay){
+        NSTimeInterval playTime = self.sliderView.value * CMTimeGetSeconds(self.player.currentItem.duration);
+        CMTime seekTime = CMTimeMake(playTime, 1);
+        [self.player seekToTime:seekTime completionHandler:^(BOOL finished) {
+        }];
+    }
+}
+
+
+
+#pragma mark - private Methods
+
 - (void)observeValueForKeyPath:(NSString *)keyPath
                       ofObject:(id)object
                         change:(NSDictionary *)change
@@ -165,26 +196,6 @@
         _progressView.progress = currentLoadTotalTime/CMTimeGetSeconds(self.player.currentItem.duration);
     }
 }
-
-
-#pragma mark - 事件响应处理
-//播放失败，点击重新加载
-- (IBAction)playerInfoBtnClick:(id)sender {
-    //在这里处理播放失败逻辑
-}
-//UISlider的响应方法:拖动滑块，改变播放进度
-- (IBAction)sliderViewChange:(id)sender {
-    if(self.player.status == AVPlayerStatusReadyToPlay){
-        NSTimeInterval playTime = self.sliderView.value * CMTimeGetSeconds(self.player.currentItem.duration);
-        CMTime seekTime = CMTimeMake(playTime, 1);
-        [self.player seekToTime:seekTime completionHandler:^(BOOL finished) {
-        }];
-    }
-}
-
-
-
-#pragma mark - 辅助方法
 //转换时间格式
 - (NSString *)formatTimeWithTimeInterVal:(NSTimeInterval)timeInterVal{
     int minute = 0, hour = 0, secend = timeInterVal;
